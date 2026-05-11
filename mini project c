@@ -1,0 +1,312 @@
+#include <stdio.h>
+#include <stdlib.h>
+
+struct clientData
+{
+    unsigned int acctNum;
+    char lastName[20];
+    char firstName[15];
+    double balance;
+    int pin;
+};
+
+int menu();
+void initializeFile(FILE *fp);
+void createAccount(FILE *fp);
+void deposit(FILE *fp);
+void withdraw(FILE *fp);
+void checkBalance(FILE *fp);
+void changePin(FILE *fp);
+void deleteAccount(FILE *fp);
+void generateReport(FILE *fp);
+
+int main()
+{
+    FILE *fp;
+
+    fp = fopen("credit.dat", "rb+");
+
+    if (fp == NULL)
+    {
+        fp = fopen("credit.dat", "wb+");
+        initializeFile(fp);
+        printf("New database created.\n");
+    }
+
+    int choice;
+
+    while ((choice = menu()) != 9)
+    {
+        switch (choice)
+        {
+        case 1: createAccount(fp); break;
+        case 2: deposit(fp); break;
+        case 3: withdraw(fp); break;
+        case 4: checkBalance(fp); break;
+        case 5: changePin(fp); break;
+        case 6: deleteAccount(fp); break;
+        case 7: generateReport(fp); break;
+        case 8:
+            initializeFile(fp);
+            printf("Database reset successfully.\n");
+            break;
+        default:
+            printf("Invalid choice\n");
+        }
+    }
+
+    fclose(fp);
+    return 0;
+}
+
+void initializeFile(FILE *fp)
+{
+    struct clientData blank = {0, "", "", 0.0, 0};
+    rewind(fp);
+
+    for (int i = 0; i < 120; i++)
+    {
+        fwrite(&blank, sizeof(struct clientData), 1, fp);
+    }
+
+    fflush(fp);
+}
+
+int menu()
+{
+    int ch;
+    printf("\n====== BANK SYSTEM ======\n");
+    printf("1. Create Account\n");
+    printf("2. Deposit\n");
+    printf("3. Withdraw\n");
+    printf("4. Balance Check\n");
+    printf("5. Change PIN\n");
+    printf("6. Delete Account\n");
+    printf("7. Generate accounts.txt\n");
+    printf("8. Reset Database\n");
+    printf("9. Exit\n");
+    printf("Enter choice: ");
+    scanf("%d", &ch);
+    return ch;
+}
+
+void createAccount(FILE *fp)
+{
+    struct clientData c = {0,"","",0.0,0};
+    int acc;
+
+    printf("Enter account number (1-120): ");
+    scanf("%d",&acc);
+
+    if(acc < 1 || acc > 120)
+    {
+        printf("Invalid account number\n");
+        return;
+    }
+
+    fseek(fp,(acc-1)*sizeof(c),SEEK_SET);
+    fread(&c,sizeof(c),1,fp);
+
+    if(c.acctNum == acc)
+    {
+        printf("Account already exists\n");
+        return;
+    }
+
+    printf("Enter LastName FirstName Balance PIN:\n");
+    scanf("%s%s%lf%d",c.lastName,c.firstName,&c.balance,&c.pin);
+
+    c.acctNum = acc;
+
+    fseek(fp,(acc-1)*sizeof(c),SEEK_SET);
+    fwrite(&c,sizeof(c),1,fp);
+
+    printf("Account created successfully\n");
+}
+
+void deposit(FILE *fp)
+{
+    struct clientData c;
+    int acc;
+    double amt;
+
+    printf("Enter account number: ");
+    scanf("%d",&acc);
+
+    fseek(fp,(acc-1)*sizeof(c),SEEK_SET);
+    fread(&c,sizeof(c),1,fp);
+
+    if(c.acctNum != acc)
+    {
+        printf("Account not found\n");
+        return;
+    }
+
+    printf("Enter amount: ");
+    scanf("%lf",&amt);
+
+    if(amt <= 1)
+    {
+        printf("Invalid amount\n");
+        return;
+    }
+
+    c.balance += amt;
+
+    fseek(fp,-sizeof(c),SEEK_CUR);
+    fwrite(&c,sizeof(c),1,fp);
+
+    printf("Deposit successful\n");
+}
+
+void withdraw(FILE *fp)
+{
+    struct clientData c;
+    int acc, pin;
+    double amt;
+
+    printf("Enter account number: ");
+    scanf("%d",&acc);
+
+    fseek(fp,(acc-1)*sizeof(c),SEEK_SET);
+    fread(&c,sizeof(c),1,fp);
+
+    if(c.acctNum != acc)
+    {
+        printf("Account not found\n");
+        return;
+    }
+
+    printf("Enter PIN: ");
+    scanf("%d",&pin);
+
+    if(pin != c.pin)
+    {
+        printf("Wrong PIN\n");
+        return;
+    }
+
+    printf("Enter amount: ");
+    scanf("%lf",&amt);
+
+    if(amt <= 1 || amt > c.balance)
+    {
+        printf("Invalid or insufficient balance\n");
+        return;
+    }
+
+    c.balance -= amt;
+
+    fseek(fp,-sizeof(c),SEEK_CUR);
+    fwrite(&c,sizeof(c),1,fp);
+
+    printf("Withdrawal successful\n");
+}
+
+void checkBalance(FILE *fp)
+{
+    struct clientData c;
+    int acc, pin;
+
+    printf("Enter account number: ");
+    scanf("%d",&acc);
+
+    fseek(fp,(acc-1)*sizeof(c),SEEK_SET);
+    fread(&c,sizeof(c),1,fp);
+
+    if(c.acctNum != acc)
+    {
+        printf("Account not found\n");
+        return;
+    }
+
+    printf("Enter PIN: ");
+    scanf("%d",&pin);
+
+    if(pin != c.pin)
+    {
+        printf("Wrong PIN\n");
+        return;
+    }
+
+    printf("Balance: %.3lf\n",c.balance);
+}
+
+void changePin(FILE *fp)
+{
+    struct clientData c;
+    int acc, pin, newpin;
+
+    printf("Enter account number: ");
+    scanf("%d",&acc);
+
+    fseek(fp,(acc-1)*sizeof(c),SEEK_SET);
+    fread(&c,sizeof(c),1,fp);
+
+    if(c.acctNum != acc)
+    {
+        printf("Account not found\n");
+        return;
+    }
+
+    printf("Enter old PIN: ");
+    scanf("%d",&pin);
+
+    if(pin != c.pin)
+    {
+        printf("Wrong PIN\n");
+        return;
+    }
+
+    printf("Enter new PIN: ");
+    scanf("%d",&newpin);
+
+    c.pin = newpin;
+
+    fseek(fp,-sizeof(c),SEEK_CUR);
+    fwrite(&c,sizeof(c),1,fp);
+
+    printf("PIN updated successfully\n");
+}
+
+void deleteAccount(FILE *fp)
+{
+    struct clientData blank = {0,"","",0.0,0};
+    int acc;
+
+    printf("Enter account number: ");
+    scanf("%d",&acc);
+
+    fseek(fp,(acc-1)*sizeof(blank),SEEK_SET);
+    fwrite(&blank,sizeof(blank),1,fp);
+
+    printf("Account deleted\n");
+}
+
+void generateReport(FILE *fp)
+{
+    FILE *out = fopen("accounts.txt","w");
+    struct clientData c;
+
+    if(out == NULL)
+    {
+        printf("Error creating file\n");
+        return;
+    }
+
+    rewind(fp);
+
+    fprintf(out,"%-8s %-20s %-15s %-12s\n","Acct","Last","First","Balance");
+
+    while(fread(&c,sizeof(c),1,fp) == 1)
+    {
+        if(c.acctNum != 0)
+        {
+            fprintf(out,"%d %-20s %-15s %.3lf\n",
+            c.acctNum,c.lastName,c.firstName,c.balance);
+        }
+    }
+
+    fclose(out);
+    printf("accounts.txt generated successfully\n");
+}
